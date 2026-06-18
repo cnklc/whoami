@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ben Kimim · Dijital Kartvizit</title>
+<meta name="description" content="Tüm iletişim bilgilerini tek bir sayfada paylaş. QR ile anında ulaşılabilir dijital kartvizit.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0d12; --surface:#151821; --surface-2:#1c2030; --line:#2a2f40;
+    --text:#eef1f8; --muted:#9aa3b8; --accent:#5b8cff; --accent-ink:#ffffff;
+    --radius:18px; --shadow:0 18px 50px rgba(0,0,0,.45);
+    --maxw:520px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #1a2030 0%, var(--bg) 55%);
+    color:var(--text); min-height:100%;
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:28px 18px 64px;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto}
+  a{color:inherit}
+  .brand{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:22px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+  .brand b{color:var(--text)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .pad{padding:22px}
+
+  /* ---------- Editor ---------- */
+  h1.title{font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:.92rem;margin-top:4px}
+  label{display:block;font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px}
+  input,textarea,select{
+    width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+    border-radius:12px;padding:11px 13px;font-size:.96rem;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1}
+
+  .swatches{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+  .sw{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .1s}
+  .sw:hover{transform:scale(1.1)}
+  .sw.on{border-color:#fff;box-shadow:0 0 0 2px var(--bg)}
+
+  .links-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .link-item{display:flex;gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px}
+  .link-item select{flex:0 0 132px;padding:8px 9px}
+  .link-item input{flex:1;background:transparent;border:none;padding:8px 4px}
+  .link-item input:focus{box-shadow:none}
+  .grab{cursor:grab;color:var(--muted);padding:0 2px;user-select:none}
+  .del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:8px}
+  .del:hover{color:#ff6b6b;background:rgba(255,107,107,.12)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;
+    border-radius:12px;padding:13px 18px;font-size:.97rem;font-weight:650;font-family:inherit;transition:transform .08s,filter .15s,background .15s}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);width:100%}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn-ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--accent)}
+  .btn-add{background:transparent;border:1px dashed var(--line);color:var(--muted);width:100%;margin-top:10px}
+  .btn-add:hover{border-color:var(--accent);color:var(--text)}
+
+  .divider{height:1px;background:var(--line);margin:20px 0}
+  .hint{font-size:.82rem;color:var(--muted);margin-top:10px;text-align:center}
+
+  /* ---------- Card view ---------- */
+  .cardview{text-align:center}
+  .cover{height:96px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 40%,#9b5bff))}
+  .avatar{width:104px;height:104px;border-radius:50%;margin:-58px auto 0;border:4px solid var(--surface);
+    background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:2.4rem;font-weight:700;
+    overflow:hidden;color:var(--accent)}
+  .avatar img{width:100%;height:100%;object-fit:cover}
+  .cv-name{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin-top:14px}
+  .cv-title{color:var(--accent);font-weight:600;margin-top:2px}
+  .cv-bio{color:var(--muted);font-size:.94rem;margin:12px auto 0;max-width:380px}
+
+  .links-out{display:flex;flex-direction:column;gap:10px;margin-top:22px;text-align:left}
+  .lk{display:flex;align-items:center;gap:13px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:13px;padding:13px 15px;text-decoration:none;transition:transform .1s,border-color .15s,background .15s}
+  .lk:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .lk .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:0 0 38px;
+    background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+  .lk .ic svg{width:20px;height:20px}
+  .lk .tx{flex:1;min-width:0}
+  .lk .tx .t{font-weight:650;font-size:.95rem}
+  .lk .tx .v{color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lk .arr{color:var(--muted)}
+
+  .actions{display:flex;gap:10px;margin-top:22px}
+  .actions .btn{flex:1}
+
+  .qr-wrap{margin-top:22px;padding:20px;background:#fff;border-radius:16px;display:inline-block}
+  #qrcode{display:flex;justify-content:center}
+  .qr-cap{color:var(--muted);font-size:.85rem;margin-top:10px}
+
+  .made{text-align:center;margin-top:26px;color:var(--muted);font-size:.82rem}
+  .made a{color:var(--accent);text-decoration:none;font-weight:600}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);
+    padding:11px 18px;border-radius:30px;font-weight:600;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:480px){ body{padding:18px 12px 50px} .pad{padding:18px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot"></span><b>Ben Kimim</b><span>· Dijital Kartvizit</span></div>
+  <div id="app"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   whoami — sunucusuz dijital kartvizit
+   Tüm veri URL içine şifrelenir (#c=...). Backend gerekmez.
+   ============================================================ */
+
+// ---- Link türleri: ikon + etiket + href üretici + placeholder ----
+const ICONS = {
+  email:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  whatsapp:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 0 1 8.413 3.488 11.82 11.82 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>',
+  instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+  linkedin:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>',
+  website:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  github:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 3.003-.404c1.018.005 2.044.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+  custom:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+};
+
+const TYPES = {
+  email:    {label:'E-posta',   ph:'ornek@mail.com',          href:v=>'mailto:'+v},
+  phone:    {label:'Telefon',   ph:'+90 5xx xxx xx xx',       href:v=>'tel:'+v.replace(/[^\d+]/g,'')},
+  whatsapp: {label:'WhatsApp',  ph:'+90 5xx xxx xx xx',       href:v=>'https://wa.me/'+v.replace(/[^\d]/g,'')},
+  instagram:{label:'Instagram', ph:'@kullaniciadi',           href:v=>'https://instagram.com/'+v.replace(/^@/,'')},
+  linkedin: {label:'LinkedIn',  ph:'linkedin.com/in/...',     href:v=>norm(v)},
+  website:  {label:'Web Sitesi',ph:'www.siten.com',           href:v=>norm(v)},
+  github:   {label:'GitHub',    ph:'github.com/kullanici',    href:v=>norm(v)},
+  x:        {label:'X (Twitter)',ph:'@kullaniciadi',          href:v=>'https://x.com/'+v.replace(/^@/,'')},
+  custom:   {label:'Özel link', ph:'Etiket | https://...',    href:v=>norm((v.split('|')[1]||v).trim())}
+};
+function norm(u){u=u.trim();return /^https?:\/\//i.test(u)?u:'https://'+u;}
+function displayVal(type,v){
+  if(type==='custom'){const p=v.split('|');return p[0].trim();}
+  return v;
+}
+function customLabel(v){const p=v.split('|');return p.length>1?p[0].trim():'Link';}
+
+const COLORS = ['#5b8cff','#7c5cff','#ff5c8a','#ff8a3d','#1fb6a8','#22c55e','#0ea5e9','#f4b400'];
+
+// ---- base64 (UTF-8 güvenli, URL uyumlu) ----
+function enc(obj){
+  const s = JSON.stringify(obj);
+  const bytes = new TextEncoder().encode(s);
+  let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function dec(b64){
+  b64 = b64.replace(/-/g,'+').replace(/_/g,'/');
+  const bin = atob(b64);
+  const bytes = Uint8Array.from(bin,c=>c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// =================== ROUTER ===================
+function route(){
+  const h = location.hash;
+  if(h.startsWith('#c=')){
+    try{ renderCard(dec(h.slice(3))); return; }
+    catch(e){ console.error(e); }
+  }
+  renderEditor();
+}
+window.addEventListener('hashchange',route);
+
+// =================== EDITOR ===================
+let state = { n:'', t:'', b:'', img:'', color:COLORS[0], links:[ {type:'email',value:''} ] };
+
+function renderEditor(){
+  // edit modundan gelince state'i koru, ilk açılışta sıfır
+  const app = document.getElementById('app');
+  app.innerHTML = `
+   <div class="card"><div class="pad">
+     <h1 class="title">Kartvizitini oluştur</h1>
+     <p class="sub">Bilgilerini gir, sana özel link + QR üret. Hesap gerekmez.</p>
+
+     <label>Ad Soyad</label>
+     <input id="f_n" placeholder="Adın Soyadın" value="${esc(state.n)}">
+
+     <label>Ünvan / Rol</label>
+     <input id="f_t" placeholder="örn. Ürün Tasarımcısı · Acme" value="${esc(state.t)}">
+
+     <label>Kısa tanıtım</label>
+     <textarea id="f_b" placeholder="Kendini bir-iki cümleyle anlat">${esc(state.b)}</textarea>
+
+     <label>Profil fotoğrafı (URL — opsiyonel)</label>
+     <input id="f_img" placeholder="https://... (boş bırakırsan baş harflerin görünür)" value="${esc(state.img)}">
+
+     <label>Tema rengi</label>
+     <div class="swatches" id="sw"></div>
+
+     <div class="divider"></div>
+
+     <label>Bağlantılar</label>
+     <div class="links-list" id="links"></div>
+     <button class="btn btn-add" id="addLink">+ Bağlantı ekle</button>
+
+     <div class="divider"></div>
+     <button class="btn btn-primary" id="gen">Linkimi & QR'ımı oluştur →</button>
+     <p class="hint">Verilerin tamamen senin linkinde saklanır, sunucuya gitmez.</p>
+   </div></div>`;
+
+  // swatches
+  const sw=document.getElementById('sw');
+  COLORS.forEach(c=>{
+    const d=document.createElement('div'); d.className='sw'+(c===state.color?' on':'');
+    d.style.background=c; d.onclick=()=>{state.color=c;document.documentElement.style.setProperty('--accent',c);
+      [...sw.children].forEach(x=>x.classList.remove('on')); d.classList.add('on');};
+    sw.appendChild(d);
+  });
+  document.documentElement.style.setProperty('--accent',state.color);
+
+  renderLinks();
+  document.getElementById('addLink').onclick=()=>{ readForm(); state.links.push({type:'website',value:''}); renderLinks(); };
+  document.getElementById('gen').onclick=generate;
+}
+
+function renderLinks(){
+  const box=document.getElementById('links'); box.innerHTML='';
+  state.links.forEach((lk,i)=>{
+    const row=document.createElement('div'); row.className='link-item';
+    const opts=Object.keys(TYPES).map(k=>`<option value="${k}" ${k===lk.type?'selected':''}>${TYPES[k].label}</option>`).join('');
+    row.innerHTML=`<span class="grab">⋮⋮</span>
+      <select>${opts}</select>
+      <input placeholder="${TYPES[lk.type].ph}" value="${esc(lk.value)}">
+      <button class="del" title="Sil">✕</button>`;
+    const sel=row.querySelector('select'), inp=row.querySelector('input');
+    sel.onchange=()=>{state.links[i].type=sel.value; inp.placeholder=TYPES[sel.value].ph;};
+    inp.oninput=()=>{state.links[i].value=inp.value;};
+    row.querySelector('.del').onclick=()=>{state.links.splice(i,1);renderLinks();};
+    box.appendChild(row);
+  });
+}
+
+function readForm(){
+  state.n=val('f_n'); state.t=val('f_t'); state.b=val('f_b'); state.img=val('f_img');
+}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function generate(){
+  readForm();
+  if(!state.n){ toast('Lütfen adını gir'); return; }
+  const links = state.links.filter(l=>l.value.trim());
+  const payload = { n:state.n, t:state.t, b:state.b, img:state.img, c:state.color, l:links };
+  location.hash = 'c=' + enc(payload);
+}
+
+// =================== CARD VIEW ===================
+function renderCard(d){
+  document.documentElement.style.setProperty('--accent', d.c || COLORS[0]);
+  const initials = (d.n||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const avatar = d.img
+    ? `<div class="avatar"><img src="${esc(d.img)}" alt="${esc(d.n)}" onerror="this.parentNode.textContent='${initials}'"></div>`
+    : `<div class="avatar">${initials}</div>`;
+
+  const links = (d.l||[]).map(lk=>{
+    const conf = TYPES[lk.type]||TYPES.custom;
+    const href = conf.href(lk.value);
+    const title = lk.type==='custom' ? customLabel(lk.value) : conf.label;
+    const sub = lk.type==='custom' ? (norm((lk.value.split('|')[1]||lk.value).trim())) : displayVal(lk.type,lk.value);
+    return `<a class="lk" href="${esc(href)}" target="_blank" rel="noopener">
+       <span class="ic">${ICONS[lk.type]||ICONS.custom}</span>
+       <span class="tx"><span class="t">${esc(title)}</span><span class="v">${esc(sub)}</span></span>
+       <span class="arr">→</span></a>`;
+  }).join('');
+
+  const app=document.getElementById('app');
+  app.innerHTML=`
+    <div class="card cardview">
+      <div class="cover"></div>
+      ${avatar}
+      <div class="pad" style="padding-top:6px">
+        <div class="cv-name">${esc(d.n)}</div>
+        ${d.t?`<div class="cv-title">${esc(d.t)}</div>`:''}
+        ${d.b?`<div class="cv-bio">${esc(d.b)}</div>`:''}
+        <div class="links-out">${links}</div>
+        <div class="actions">
+          <button class="btn btn-primary" id="save">Kişilere kaydet</button>
+          <button class="btn btn-ghost" id="share">Paylaş</button>
+        </div>
+        <div style="margin-top:8px"><button class="btn btn-ghost" id="copy" style="width:100%">Linki kopyala</button></div>
+        <div class="qr-wrap"><div id="qrcode"></div></div>
+        <div class="qr-cap">Bu QR'ı okutan kişi bu sayfaya ulaşır</div>
+      </div>
+    </div>
+    <div class="made">Kendi kartvizitini yap · <a href="${location.pathname}" id="mk">whoami</a></div>`;
+
+  // QR
+  new QRCode(document.getElementById('qrcode'),{
+    text:location.href, width:180, height:180,
+    colorDark:'#0b0d12', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M
+  });
+
+  document.getElementById('save').onclick=()=>downloadVCard(d);
+  document.getElementById('copy').onclick=()=>{navigator.clipboard.writeText(location.href).then(()=>toast('Link kopyalandı ✓'));};
+  document.getElementById('share').onclick=()=>{
+    if(navigator.share){navigator.share({title:d.n,text:d.t||'Dijital kartvizit',url:location.href});}
+    else{navigator.clipboard.writeText(location.href).then(()=>toast('Link kopyalandı ✓'));}
+  };
+  document.getElementById('mk').onclick=(e)=>{e.preventDefault();location.hash='';};
+}
+
+// vCard (.vcf) — telefon rehberine eklenebilir
+function downloadVCard(d){
+  let v='BEGIN:VCARD\nVERSION:3.0\n';
+  v+='FN:'+(d.n||'')+'\n';
+  if(d.t) v+='TITLE:'+d.t+'\n';
+  (d.l||[]).forEach(lk=>{
+    const val=lk.value;
+    if(lk.type==='email') v+='EMAIL:'+val+'\n';
+    else if(lk.type==='phone') v+='TEL:'+val+'\n';
+    else if(lk.type==='whatsapp') v+='TEL;TYPE=CELL:'+val+'\n';
+    else { const conf=TYPES[lk.type]||TYPES.custom; v+='URL:'+conf.href(val)+'\n'; }
+  });
+  v+='URL:'+location.href+'\nEND:VCARD';
+  const blob=new Blob([v],{type:'text/vcard'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=(d.n||'kartvizit').replace(/\s+/g,'_')+'.vcf';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('Kişi kartı indirildi');
+}
+
+route();
+</script>
+</body>
+</html>
